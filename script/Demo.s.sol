@@ -45,7 +45,8 @@ contract Demo is Script {
         console2.log("Epistemic Ledger demo");
         console2.log("---------------------");
         console2.log("Registry:", address(registry));
-        console2.logBytes32("Content hash:", contentHash);
+        console2.log("Content hash:");
+        console2.logBytes32(contentHash);
         console2.log("Status:", uint256(summary.status));
         console2.log("Confidence score:", summary.confidenceScore);
         console2.log("Valid:", registry.isAttestationValid(contentHash));
