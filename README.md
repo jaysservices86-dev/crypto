@@ -1,1 +1,58 @@
-# crypto
+# Epistemic Ledger Foundry
+
+Foundry contracts for an Epistemic Ledger attestation registry, adapter, mocks, and deployment script.
+
+## Business-model alignment
+
+This repository implements the on-chain consumption layer described in the Epistemic Ledger business model:
+
+- Finalized truth ratings are stored as queryable attestation summaries for B2B Trust API consumers.
+- Attestations can retain oracle validator addresses and metadata bytes for provenance, consensus evidence, C2PA anchors, or off-chain evidence bundles.
+- Only the registry owner or approved finalizer addresses can finalize attestations, matching the intended oracle/consensus-controller flow.
+- Validity checks recognize only `Verified` and `Hypothesis` attestations that have not expired.
+- The adapter contract gives downstream applications a stable read surface over the registry.
+
+The broader ingestion, deterministic AI triage, staking/slashing, challenger rewards, API billing, and hardware licensing systems remain separate modules to be implemented around this registry.
+
+## Layout
+
+- `src/interfaces/IAttestationConsumer.sol` - attestation read interface and shared types.
+- `src/registry/EpistemicLedgerRegistry.sol` - registry for finalized attestation summaries and evidence metadata.
+- `src/adapters/AttestationConsumer.sol` - base consumer adapter that delegates reads to the registry.
+- `src/mocks/` - mock token and oracle contracts.
+- `script/Deploy.s.sol` - deployment script for the registry.
+- `script/Demo.s.sol` - local simulation demo for the oracle finalization and trust-query flow.
+- `test/Registry.t.sol` - uploaded registry tests.
+
+## Commands
+
+```sh
+forge build
+forge test
+```
+
+## Run the demo
+
+Install dependencies and run the local Foundry simulation:
+
+```sh
+git submodule update --init --recursive
+forge script script/Demo.s.sol
+```
+
+The demo deploys a registry, approves a mock oracle finalizer, finalizes a sample C2PA-style content
+hash with validator/evidence metadata, then queries the registry. Expected output includes:
+
+```txt
+Epistemic Ledger demo
+Registry: <deployed registry address>
+Content hash: <bytes32>
+Status: 2
+Confidence score: 9700
+Valid: true
+Validator count: 3
+Metadata bytes: <non-zero length>
+Expiry timestamp: <future timestamp>
+```
+
+`Status: 2` maps to `AttestationStatus.Verified`.
