@@ -8,6 +8,7 @@ This repository implements the on-chain consumption layer described in the Epist
 
 - Finalized truth ratings are stored as queryable attestation summaries for B2B Trust API consumers.
 - Attestations can retain oracle validator addresses and metadata bytes for provenance, consensus evidence, C2PA anchors, or off-chain evidence bundles.
+- Only the registry owner or approved finalizer addresses can finalize attestations, matching the intended oracle/consensus-controller flow.
 - Validity checks recognize only `Verified` and `Hypothesis` attestations that have not expired.
 - The adapter contract gives downstream applications a stable read surface over the registry.
 

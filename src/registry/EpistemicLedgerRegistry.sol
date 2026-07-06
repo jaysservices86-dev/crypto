@@ -4,15 +4,42 @@ pragma solidity ^0.8.20;
 import "../interfaces/IAttestationConsumer.sol";
 
 contract EpistemicLedgerRegistry is IAttestationConsumer {
+    address public owner;
+
     mapping(bytes32 => Attestation) private _attestations;
     mapping(bytes32 => AttestationSummary) private _summaries;
+    mapping(address => bool) public isFinalizer;
+
+    error NotRegistryOwner(address caller);
+    error NotAuthorizedFinalizer(address caller);
+
+    event FinalizerUpdated(address indexed finalizer, bool allowed);
+
+    modifier onlyOwner() {
+        if (msg.sender != owner) revert NotRegistryOwner(msg.sender);
+        _;
+    }
+
+    modifier onlyFinalizer() {
+        if (msg.sender != owner && !isFinalizer[msg.sender]) revert NotAuthorizedFinalizer(msg.sender);
+        _;
+    }
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+    function setFinalizer(address finalizer, bool allowed) external onlyOwner {
+        isFinalizer[finalizer] = allowed;
+        emit FinalizerUpdated(finalizer, allowed);
+    }
 
     function finalizeAttestation(
         bytes32 contentHash,
         AttestationStatus status,
         uint256 confidenceScore,
         uint256 expiryTimestamp
-    ) external {
+    ) external onlyFinalizer {
         address[] memory validators = new address[](0);
         _finalizeAttestation(contentHash, status, confidenceScore, expiryTimestamp, validators, new bytes(0));
     }
@@ -24,7 +51,7 @@ contract EpistemicLedgerRegistry is IAttestationConsumer {
         uint256 expiryTimestamp,
         address[] calldata validators,
         bytes calldata metadata
-    ) external {
+    ) external onlyFinalizer {
         address[] memory validatorCopy = new address[](validators.length);
         for (uint256 i = 0; i < validators.length; i++) {
             validatorCopy[i] = validators[i];
@@ -110,15 +137,12 @@ contract EpistemicLedgerRegistry is IAttestationConsumer {
         }
 
         _summaries[contentHash] = AttestationSummary({
-            contentHash: contentHash,
-            status: status,
-            confidenceScore: confidenceScore,
-            expiryTimestamp: expiryTimestamp
+            contentHash: contentHash, status: status, confidenceScore: confidenceScore, expiryTimestamp: expiryTimestamp
         });
 
         emit AttestationFinalized(contentHash, status, confidenceScore, block.timestamp);
         if (status == AttestationStatus.Expired || _isExpired(expiryTimestamp)) {
-            emit AttestationExpired(contentHash, expiryTimestamp);
+            emit AttestationMarkedExpired(contentHash, expiryTimestamp);
         }
     }
 

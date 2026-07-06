@@ -29,7 +29,13 @@ abstract contract AttestationConsumer is IAttestationConsumer {
         return IAttestationConsumer(EPISTEMIC_LEDGER_REGISTRY).getAttestation(contentHash);
     }
 
-    function getAttestationSummary(bytes32 contentHash) external view virtual override returns (AttestationSummary memory) {
+    function getAttestationSummary(bytes32 contentHash)
+        external
+        view
+        virtual
+        override
+        returns (AttestationSummary memory)
+    {
         return IAttestationConsumer(EPISTEMIC_LEDGER_REGISTRY).getAttestationSummary(contentHash);
     }
 
