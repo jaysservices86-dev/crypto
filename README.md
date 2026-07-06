@@ -21,6 +21,7 @@ The broader ingestion, deterministic AI triage, staking/slashing, challenger rew
 - `src/adapters/AttestationConsumer.sol` - base consumer adapter that delegates reads to the registry.
 - `src/mocks/` - mock token and oracle contracts.
 - `script/Deploy.s.sol` - deployment script for the registry.
+- `script/Demo.s.sol` - local simulation demo for the oracle finalization and trust-query flow.
 - `test/Registry.t.sol` - uploaded registry tests.
 
 ## Commands
@@ -29,3 +30,29 @@ The broader ingestion, deterministic AI triage, staking/slashing, challenger rew
 forge build
 forge test
 ```
+
+## Run the demo
+
+Install dependencies and run the local Foundry simulation:
+
+```sh
+git submodule update --init --recursive
+forge script script/Demo.s.sol
+```
+
+The demo deploys a registry, approves a mock oracle finalizer, finalizes a sample C2PA-style content
+hash with validator/evidence metadata, then queries the registry. Expected output includes:
+
+```txt
+Epistemic Ledger demo
+Registry: <deployed registry address>
+Content hash: <bytes32>
+Status: 2
+Confidence score: 9700
+Valid: true
+Validator count: 3
+Metadata bytes: <non-zero length>
+Expiry timestamp: <future timestamp>
+```
+
+`Status: 2` maps to `AttestationStatus.Verified`.
