@@ -1,0 +1,22 @@
+[Unit]
+Description=Autonomous Arbitrage Lattice Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=arbitrage
+WorkingDirectory=/opt/arbitrage-lattice
+EnvironmentFile=/opt/arbitrage-lattice/.env
+ExecStart=/opt/arbitrage-lattice/.venv/bin/arbitrage-lattice serve --interval-seconds 300
+Restart=on-failure
+RestartSec=10
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/arbitrage-lattice
+
+[Install]
+WantedBy=multi-user.target
