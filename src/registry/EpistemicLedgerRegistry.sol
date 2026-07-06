@@ -13,22 +13,25 @@ contract EpistemicLedgerRegistry is IAttestationConsumer {
         uint256 confidenceScore,
         uint256 expiryTimestamp
     ) external {
-        Attestation storage attestation = _attestations[contentHash];
-        attestation.contentHash = contentHash;
-        attestation.status = status;
-        attestation.confidenceScore = confidenceScore;
-        attestation.validatorCount = 0;
-        attestation.timestamp = block.timestamp;
-        attestation.expiryTimestamp = expiryTimestamp;
+        address[] memory validators = new address[](0);
+        _finalizeAttestation(contentHash, status, confidenceScore, expiryTimestamp, validators, new bytes(0));
+    }
 
-        _summaries[contentHash] = AttestationSummary({
-            contentHash: contentHash,
-            status: status,
-            confidenceScore: confidenceScore,
-            expiryTimestamp: expiryTimestamp
-        });
+    function finalizeAttestationWithEvidence(
+        bytes32 contentHash,
+        AttestationStatus status,
+        uint256 confidenceScore,
+        uint256 expiryTimestamp,
+        address[] calldata validators,
+        bytes calldata metadata
+    ) external {
+        address[] memory validatorCopy = new address[](validators.length);
+        for (uint256 i = 0; i < validators.length; i++) {
+            validatorCopy[i] = validators[i];
+        }
 
-        emit AttestationFinalized(contentHash, status, confidenceScore, block.timestamp);
+        bytes memory metadataCopy = metadata;
+        _finalizeAttestation(contentHash, status, confidenceScore, expiryTimestamp, validatorCopy, metadataCopy);
     }
 
     function getAttestation(bytes32 contentHash) external view override returns (Attestation memory) {
@@ -84,8 +87,49 @@ contract EpistemicLedgerRegistry is IAttestationConsumer {
         return _summaries[contentHash].expiryTimestamp;
     }
 
+    function _finalizeAttestation(
+        bytes32 contentHash,
+        AttestationStatus status,
+        uint256 confidenceScore,
+        uint256 expiryTimestamp,
+        address[] memory validators,
+        bytes memory metadata
+    ) internal {
+        Attestation storage attestation = _attestations[contentHash];
+        attestation.contentHash = contentHash;
+        attestation.status = status;
+        attestation.confidenceScore = confidenceScore;
+        attestation.validatorCount = validators.length;
+        attestation.timestamp = block.timestamp;
+        attestation.expiryTimestamp = expiryTimestamp;
+        attestation.metadata = metadata;
+
+        delete attestation.validators;
+        for (uint256 i = 0; i < validators.length; i++) {
+            attestation.validators.push(validators[i]);
+        }
+
+        _summaries[contentHash] = AttestationSummary({
+            contentHash: contentHash,
+            status: status,
+            confidenceScore: confidenceScore,
+            expiryTimestamp: expiryTimestamp
+        });
+
+        emit AttestationFinalized(contentHash, status, confidenceScore, block.timestamp);
+        if (status == AttestationStatus.Expired || _isExpired(expiryTimestamp)) {
+            emit AttestationExpired(contentHash, expiryTimestamp);
+        }
+    }
+
     function _isAttestationValid(bytes32 contentHash) internal view returns (bool) {
-        AttestationStatus status = _summaries[contentHash].status;
-        return status == AttestationStatus.Verified || status == AttestationStatus.Hypothesis;
+        AttestationSummary memory summary = _summaries[contentHash];
+        bool validStatus =
+            summary.status == AttestationStatus.Verified || summary.status == AttestationStatus.Hypothesis;
+        return validStatus && !_isExpired(summary.expiryTimestamp);
+    }
+
+    function _isExpired(uint256 expiryTimestamp) internal view returns (bool) {
+        return expiryTimestamp != 0 && block.timestamp >= expiryTimestamp;
     }
 }
